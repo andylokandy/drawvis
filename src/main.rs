@@ -21,8 +21,8 @@ impl Config {
 }
 
 const INTERVAL_SECS: usize = 60;
-const INTERS_PER_INTERVAL: usize = 6;
-const ROWS_PER_TABLE: usize = 100;
+const INTERS_PER_INTERVAL: usize = 2;
+const ROWS_PER_TABLE: usize = 1;
 
 #[throws(failure::Error)]
 fn main() -> () {
@@ -48,13 +48,20 @@ fn main() -> () {
     for x in 0..width {
         println!("Drawing x = {}", x);
         for _ in 0..INTERS_PER_INTERVAL {
+            let start = std::time::Instant::now();
             for y in 0..height {
                 println!("Drawing y = {}", y);
-                write_batch(&mut conn, img.get_pixel(x, y).0[0] as usize)?;
+                for _ in 0..(img.get_pixel(x, y).0[0] / 2) {
+                    write_batch(&mut conn, (height - y - 1) as usize)?;
+                }
             }
-            std::thread::sleep(std::time::Duration::from_secs(
-                (INTERVAL_SECS / INTERS_PER_INTERVAL) as u64,
-            ));
+            let time_used = std::time::Instant::now() - start;
+            if let Some(sleep) =
+                std::time::Duration::from_secs((INTERVAL_SECS / INTERS_PER_INTERVAL) as u64)
+                   .checked_sub(time_used)
+            {
+                std::thread::sleep(sleep);
+            }
         }
     }
 
@@ -68,7 +75,7 @@ fn prepare_db(conn: &mut PooledConn, table_count: usize) -> () {
     conn.query_drop(r"USE test")?;
 
     for table in 0..table_count {
-        println!("Preparing talbe {}", table);
+        println!("Preparing table {}", table);
 
         conn.query_drop(format!(
             r"CREATE TABLE draw{} (
@@ -92,10 +99,7 @@ fn prepare_db(conn: &mut PooledConn, table_count: usize) -> () {
 #[throws(failure::Error)]
 fn write_batch(conn: &mut PooledConn, table_idx: usize) -> () {
     conn.exec_batch(
-        format!(
-            r"UPDATE INTO draw{} SET val = val + 1 WHERE id = :id",
-            table_idx
-        ),
+        format!(r"UPDATE draw{} SET val = val + 1 WHERE id = :id", table_idx),
         (0..ROWS_PER_TABLE).map(|r| {
             params! {
                 "id" => r,
