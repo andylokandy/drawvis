@@ -21,7 +21,7 @@ impl Config {
 }
 
 const INTERVAL_SECS: usize = 60;
-const INTERS_PER_INTERVAL: usize = 2;
+const ITER_PER_INTERVAL: usize = 2;
 const ROWS_PER_TABLE: usize = 1;
 
 #[throws(failure::Error)]
@@ -47,7 +47,7 @@ fn main() -> () {
 
     for x in 0..width {
         println!("Drawing x = {}", x);
-        for _ in 0..INTERS_PER_INTERVAL {
+        for _ in 0..ITER_PER_INTERVAL {
             let start = std::time::Instant::now();
             for y in 0..height {
                 println!("Drawing y = {}", y);
@@ -57,7 +57,7 @@ fn main() -> () {
             }
             let time_used = std::time::Instant::now() - start;
             if let Some(sleep) =
-                std::time::Duration::from_secs((INTERVAL_SECS / INTERS_PER_INTERVAL) as u64)
+                std::time::Duration::from_secs((INTERVAL_SECS / ITER_PER_INTERVAL) as u64)
                    .checked_sub(time_used)
             {
                 std::thread::sleep(sleep);
